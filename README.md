@@ -18,10 +18,6 @@ Attention(Q, K, V) = softmax(QK^T / √d_k) V
 
 - 实现位置：[main.py](main.py) — scaled_dot_product_attention()
 - 测试验证：[test_attention.py](test_attention.py) — 4 项测试全部通过
-  - 输出形状正确 ✅
-  - 注意力权重每行和为 1 ✅
-  - 缩放因子生效（熵正常） ✅
-  - Mask 正确遮断 ✅
 
 ✅ **2. Multi-Head Attention** — 已完成并提交
 
@@ -32,13 +28,19 @@ head_i = Attention(Q W_i^Q, K W_i^K, V W_i^V)
 
 - 实现位置：[main.py](main.py) — MultiHeadAttention(nn.Module)
 - 测试验证：[test_multihead.py](test_multihead.py) — 5 项测试全部通过
-  - 输出形状正确 ✅
-  - 注意力权重每头每行和为 1 ✅
-  - Causal mask 遮断正确 ✅
-  - Cross-attention（Q/KV 不同序列长度） ✅
-  - 梯度正常反向传播 ✅
 
-**下一块积木：⬇️ Positional Encoding**
+✅ **3. Positional Encoding** — 已完成并提交
+
+`
+PE(pos, 2i)   = sin(pos / 10000^(2i/d_model))
+PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
+`
+
+- 实现位置：[main.py](main.py) — PositionalEncoding(nn.Module)
+- 测试验证：[test_positional.py](test_positional.py) — 5 项测试全部通过
+- 向量化广播实现，与论文公式逐元素误差 < 6e-8
+
+**下一块积木：⬇️ Feed-Forward Network**
 
 ---
 
@@ -49,9 +51,9 @@ Scaled Dot-Product Attention    ← ✅ 已完成
     ↓
 Multi-Head Attention            ← ✅ 已完成
     ↓
-Positional Encoding             ← ⏳ 待开始
+Positional Encoding             ← ✅ 已完成
     ↓
-Feed-Forward Network
+Feed-Forward Network            ← ⏳ 待开始
     ↓
 Transformer Block (Encoder)
     ↓
@@ -66,13 +68,13 @@ CUDA 版：从 Python 到 C++
 
 ## 遗留问题
 
-1. scaled_dot_product_attention() 中 	orch.sqrt(torch.tensor(q.shape[-1])) 可优化为 math.sqrt(q.shape[-1]) — 纯风格问题，不影响正确性
-2. MultiHeadAttention.forward() 中 T_v 变量未使用，可清理
+1. MultiHeadAttention.forward() 中 T_v 变量未使用，可清理
+2. MultiHeadAttention 中各投影层命名（Qline 等）可统一为 W_q / W_k / W_v / W_o 风格
 
 ## 验证方法
 
 `ash
-pytest test_attention.py test_multihead.py
+pytest test_attention.py test_multihead.py test_positional.py
 `
 
 所有测试应通过，无报错。
