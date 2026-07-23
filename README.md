@@ -10,37 +10,23 @@
 
 ## 当前进度
 
-✅ **1. Scaled Dot-Product Attention** — 已完成并提交
+✅ **1. Scaled Dot-Product Attention**
+✅ **2. Multi-Head Attention**
+✅ **3. Positional Encoding**
+✅ **4. Position-wise Feed-Forward Network** — 已完成
 
 `
-Attention(Q, K, V) = softmax(QK^T / √d_k) V
+FFN(x) = ReLU(x W_1 + b_1) W_2 + b_2,  d_ff = 4 * d_model
 `
 
-- 实现位置：[main.py](main.py) — scaled_dot_product_attention()
-- 测试验证：[test_attention.py](test_attention.py) — 4 项测试全部通过
+- 实现位置：[main.py](main.py) — PositionwiseFeedForward(nn.Module)
+- 测试验证：[test_ffn.py](test_ffn.py) — 4 项测试全部通过
+  - 输出形状正确 ✅
+  - Position-wise 独立（改 token 0 不影响其他） ✅
+  - 隐藏维度 = 4 * d_model ✅
+  - 梯度流通 ✅
 
-✅ **2. Multi-Head Attention** — 已完成并提交
-
-`
-MultiHead(Q, K, V) = Concat(head_1, ..., head_h) W^O
-head_i = Attention(Q W_i^Q, K W_i^K, V W_i^V)
-`
-
-- 实现位置：[main.py](main.py) — MultiHeadAttention(nn.Module)
-- 测试验证：[test_multihead.py](test_multihead.py) — 5 项测试全部通过
-
-✅ **3. Positional Encoding** — 已完成并提交
-
-`
-PE(pos, 2i)   = sin(pos / 10000^(2i/d_model))
-PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
-`
-
-- 实现位置：[main.py](main.py) — PositionalEncoding(nn.Module)
-- 测试验证：[test_positional.py](test_positional.py) — 5 项测试全部通过
-- 向量化广播实现，与论文公式逐元素误差 < 6e-8
-
-**下一块积木：⬇️ Feed-Forward Network**
+**下一块积木：⬇️ Transformer Encoder Block**
 
 ---
 
@@ -53,11 +39,9 @@ Multi-Head Attention            ← ✅ 已完成
     ↓
 Positional Encoding             ← ✅ 已完成
     ↓
-Feed-Forward Network            ← ⏳ 待开始
+Feed-Forward Network            ← ✅ 已完成
     ↓
-Transformer Block (Encoder)
-    ↓
-Layer Normalization & Residual
+Transformer Encoder Block       ← ⏳ 待开始
     ↓
 完整 Transformer
     ↓
@@ -66,25 +50,10 @@ CUDA 版：从 Python 到 C++
 
 ---
 
-## 遗留问题
-
-1. MultiHeadAttention.forward() 中 T_v 变量未使用，可清理
-2. MultiHeadAttention 中各投影层命名（Qline 等）可统一为 W_q / W_k / W_v / W_o 风格
-
 ## 验证方法
 
 `ash
-pytest test_attention.py test_multihead.py test_positional.py
+pytest test_attention.py test_multihead.py test_positional.py test_ffn.py
 `
 
 所有测试应通过，无报错。
-
-## 提交记录
-
-- 最新 — eat: add multi-head attention
-  - 新增 MultiHeadAttention(nn.Module) 类
-  - 新增 	est_multihead.py（5 项测试用例）
-- 3393d90 — eat: add scaled dot-product attention
-  - 新增 .gitignore（Python 标准忽略规则）
-  - 新增 main.py（scaled_dot_product_attention 函数）
-  - 新增 	est_attention.py（4 项测试用例）
