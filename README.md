@@ -17,6 +17,7 @@ transformer_implement/
 ├── test_ffn.py             # Feed-Forward Network 测试（4 项）
 ├── test_encoder.py         # Encoder Block + TransformerEncoder 测试（7 项）
 ├── test_decoder.py         # Decoder Block + TransformerDecoder 测试（7 项）
+├── test_transformer.py     # 完整端到端 Transformer 测试（5 项）
 ├── .vscode/
 │   └── settings.json       # VS Code 配置：conda 环境、pytest runner
 ├── AGENTS.md               # Agent 行为指南（仅供 agent 读取）
@@ -39,7 +40,7 @@ transformer_implement/
 | Transformer Encoder | `TransformerEncoder` | `test_encoder.py` | 3 | ✅ |
 | Decoder Block | `DecoderBlock` | `test_decoder.py` | 4 | ✅ |
 | Transformer Decoder | `TransformerDecoder` | `test_decoder.py` | 3 | ✅ |
-| 完整 Transformer | 待整合 PE + Encoder + Decoder | — | 0 | ⏳ |
+| 完整端到端 Transformer | `Transformer` | `test_transformer.py` | 5 | ✅ |
 
 ---
 
@@ -47,9 +48,9 @@ transformer_implement/
 
 ### ✅ 1. Scaled Dot-Product Attention
 
-`
+```
 Attention(Q, K, V) = softmax(Q K^T / sqrt(d_k)) V
-`
+```
 
 - 实现：[main.py](main.py) — `scaled_dot_product_attention(q, k, v, mask=None)`
 - 测试：[test_attention.py](test_attention.py) — 4 项
@@ -60,10 +61,10 @@ Attention(Q, K, V) = softmax(Q K^T / sqrt(d_k)) V
 
 ### ✅ 2. Multi-Head Attention
 
-`
+```
 MultiHead(Q, K, V) = Concat(head_1, ..., head_h) W_O
 head_i = Attention(Q W_Q_i, K W_K_i, V W_V_i)
-`
+```
 
 - 实现：[main.py](main.py) — `MultiHeadAttention(d_model, num_heads)`
 - 测试：[test_multihead.py](test_multihead.py) — 5 项
@@ -75,10 +76,10 @@ head_i = Attention(Q W_Q_i, K W_K_i, V W_V_i)
 
 ### ✅ 3. Positional Encoding
 
-`
+```
 PE(pos, 2i)   = sin(pos / 10000^(2i/d_model))
 PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
-`
+```
 
 - 实现：[main.py](main.py) — `PositionalEncoding(d_model, max_len=50000)`
 - 测试：[test_positional.py](test_positional.py) — 5 项
@@ -90,9 +91,9 @@ PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
 
 ### ✅ 4. Position-wise Feed-Forward Network
 
-`
+```
 FFN(x) = ReLU(x W_1 + b_1) W_2 + b_2,  d_ff = 4 * d_model
-`
+```
 
 - 实现：[main.py](main.py) — `PositionwiseFeedForward(d_model)`
 - 测试：[test_ffn.py](test_ffn.py) — 4 项
@@ -103,10 +104,10 @@ FFN(x) = ReLU(x W_1 + b_1) W_2 + b_2,  d_ff = 4 * d_model
 
 ### ✅ 5. Encoder Block
 
-`
+```
 x = LayerNorm(x + MultiHead(x, x, x))
 x = LayerNorm(x + FFN(x))
-`
+```
 
 - 实现：[main.py](main.py) — `EncoderBlock(d_model, num_heads)` + `TransformerEncoder(d_model, num_heads, num_layers)`
 - 测试：[test_encoder.py](test_encoder.py) — 7 项
@@ -120,11 +121,11 @@ x = LayerNorm(x + FFN(x))
 
 ### ✅ 6. Decoder Block
 
-`
+```
 x = LayerNorm(x + MaskedSelfAttn(x, x, x))
 x = LayerNorm(x + CrossAttn(x, enc_output, enc_output))
 x = LayerNorm(x + FFN(x))
-`
+```
 
 - 实现：[main.py](main.py) — `DecoderBlock(d_model, num_heads)` + `TransformerDecoder(d_model, num_heads, num_layers)`
 - 测试：[test_decoder.py](test_decoder.py) — 7 项
@@ -135,6 +136,28 @@ x = LayerNorm(x + FFN(x))
   - 交叉注意力支持不同长度（T_q ≠ T_kv） ✅
   - Encoder → Decoder 端到端联调 ✅
   - 确定性 ✅
+
+### ✅ 7. 完整端到端 Transformer
+
+```
+Transformer(src, tgt) = OutputProj(Decoder(tgt+PE, Encoder(src+PE)))
+
+src:  token IDs → Embedding → +PE → TransformerEncoder → encoder_output
+tgt:  token IDs → Embedding → +PE → TransformerDecoder(encoder_output) → Linear → logits
+```
+
+- 实现：[main.py](main.py) — `Transformer(src_vocab_size, tgt_vocab_size, d_model, num_heads, num_layers, max_len=5000)`
+- 测试：[test_transformer.py](test_transformer.py) — 5 项
+  - 输出形状 `(B, T_tgt, tgt_vocab_size)` ✅
+  - 梯度流经全部参数 ✅
+  - 源序列/目标序列不同长度 ✅
+  - 确定性（eval 模式） ✅
+  - Causal mask 按实际序列长度动态切片 ✅
+
+**关键设计点**：
+- 源和目标使用独立的 `nn.Embedding` 层
+- Causal mask 在 `forward` 中根据 `target.size(1)` 动态切片
+- Decoder 先将目标 embedding 传入 self-attention，再将 encoder output 传入 cross-attention
 
 ---
 
@@ -149,13 +172,11 @@ Positional Encoding             ← ✅
     ↓
 Feed-Forward Network            ← ✅
     ↓
-Transformer Encoder Block       ← ✅
+Transformer Encoder             ← ✅
     ↓
-Transformer Decoder Block       ← ✅
+Transformer Decoder             ← ✅
     ↓
-Encoder / Decoder 测试          ← ✅
-    ↓
-完整 Transformer（整合 PE + Encoder + Decoder）  ← ⏳ 待开始
+完整端到端 Transformer          ← ✅
     ↓
 CUDA 版：从 Python 到 C++       ← ⏳ 规划中
 ```
@@ -180,7 +201,7 @@ CUDA 版：从 Python 到 C++       ← ⏳ 规划中
   ```
 - **运行单个文件**：
   ```bash
-  pytest test_encoder.py -v
+  pytest test_transformer.py -v
   ```
 - **新增组件时**：必须补充对应的测试文件，并确保全部测试通过后再提交
 
@@ -230,10 +251,11 @@ CUDA 版：从 Python 到 C++       ← ⏳ 规划中
 ## 验证方法
 
 ```bash
+conda activate pytorch_env_v1
 pytest
 ```
 
-运行全部 32 项测试，所有测试应通过，无报错。
+运行全部 37 项测试，所有测试应通过，无报错。
 
 当前测试分布：
 
@@ -245,13 +267,19 @@ pytest
 | `test_ffn.py` | 4 |
 | `test_encoder.py` | 7 |
 | `test_decoder.py` | 7 |
-| **合计** | **32** |
+| `test_transformer.py` | 5 |
+| **合计** | **37** |
 
 ---
 
-## 下一步待办
+## 下一步方向
 
-1. **完整 Transformer**：将 PositionalEncoding + TransformerEncoder + TransformerDecoder 整合为一个端到端的 `Transformer` 类，支持源语言到目标语言的完整序列转换
-2. **测试增强**：为完整 Transformer 编写集成测试
-3. **CUDA 版迁移**：将 Python 实现转写为 CUDA C++（远期规划）
-4. **代码拆包**：当 `main.py` 足够庞大时，拆为 `src/` 包
+所有基础组件已全部实现并测试完毕，Transformer 的 From-Scratch 实现阶段**基本完结**。后续方向：
+
+1. **CUDA C++ 迁移**：将 Python 实现转写为 CUDA C++，深入理解底层计算（远期规划）
+2. **代码拆包**：当 `main.py` 足够庞大时，拆为 `src/` 包，每个模块一个文件
+3. **推理/训练示例**：用本仓库的 Transformer 跑一个小规模的机器翻译 demo
+
+---
+
+*本 README 随工程进度由 agent 同步维护。*
