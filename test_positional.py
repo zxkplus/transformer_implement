@@ -1,6 +1,6 @@
 """Test cases for Positional Encoding."""
 import torch
-from main import PositionalEncoding
+from src import PositionalEncoding
 
 
 def test_pe_output_shape():

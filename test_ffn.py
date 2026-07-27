@@ -1,6 +1,6 @@
 """Test cases for Position-wise Feed-Forward Network."""
 import torch
-from main import PositionwiseFeedForward
+from src import PositionwiseFeedForward
 
 
 def test_ffn_output_shape():

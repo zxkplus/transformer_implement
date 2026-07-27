@@ -1,6 +1,6 @@
 """Test cases for Decoder Block and Transformer Decoder."""
 import torch
-from main import DecoderBlock, TransformerDecoder, TransformerEncoder
+from src import DecoderBlock, TransformerDecoder, TransformerEncoder
 
 
 def test_decoder_output_shape():

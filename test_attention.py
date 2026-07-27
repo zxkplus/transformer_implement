@@ -6,7 +6,7 @@ import torch.nn.functional as F
 import math
 
 # 引入你的实现
-from main import scaled_dot_product_attention
+from src import scaled_dot_product_attention
 
 def test_01_output_shape():
     """测试 1: 输出形状对不对"""

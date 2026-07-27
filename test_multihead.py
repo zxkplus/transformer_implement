@@ -1,6 +1,6 @@
 """Test cases for Multi-Head Attention."""
 import torch
-from main import MultiHeadAttention
+from src import MultiHeadAttention
 
 
 def test_05_mha_output_shape():

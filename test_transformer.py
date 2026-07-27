@@ -1,6 +1,6 @@
 ﻿"""Test cases for the end-to-end Transformer."""
 import torch
-from main import Transformer
+from src import Transformer
 
 
 def test_transformer_output_shape():
