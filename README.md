@@ -17,8 +17,9 @@ transformer_implement/
 │   ├── ffn.py                  # PositionwiseFeedForward
 │   ├── encoder.py              # EncoderBlock + TransformerEncoder
 │   ├── decoder.py              # DecoderBlock + TransformerDecoder
-│   └── transformer.py          # 端到端 Transformer（整合 PE + Encoder + Decoder）
-├── main.py                     # 快速入口（from src import *，兼容旧测试）
+│   ├── transformer.py          # 端到端 Transformer（整合 PE + Encoder + Decoder）
+│   └── data.py                 # 数据处理：词表、编码、数据生成、padding（骨架搭建中）
+├── main.py                     # 快速入口（from src import *）
 ├── test_attention.py           # Scaled Dot-Product Attention 测试（4 项）
 ├── test_multihead.py           # Multi-Head Attention 测试（5 项）
 ├── test_positional.py          # Positional Encoding 测试（5 项）
@@ -45,6 +46,7 @@ transformer_implement/
 | Encoder Block + TransformerEncoder | `EncoderBlock` / `TransformerEncoder` | `test_encoder.py` | 7 | ✅ |
 | Decoder Block + TransformerDecoder | `DecoderBlock` / `TransformerDecoder` | `test_decoder.py` | 7 | ✅ |
 | 完整端到端 Transformer | `Transformer` | `test_transformer.py` | 5 | ✅ |
+| 数据处理 | 词表 + encode/decode + 数据生成 | — | 0 | ⏳ 骨架搭建中 |
 
 ---
 
@@ -63,6 +65,19 @@ transformer_implement/
 | 5. Decoder | `DecoderBlock` + `TransformerDecoder`（自注意力 + 交叉注意力 + causal mask） |
 | 6. 完整 Transformer | `Transformer`（独立 src/tgt embedding + 动态 mask 切片） |
 | 7. 代码拆包 | `src/` 包拆分完成，`__init__.py` 统一导出 |
+
+### ⏳ 数据处理（骨架搭建中）
+
+目标：为数字加法推理/训练提供数据 pipeline。
+
+| 子模块 | 状态 |
+|---|---|
+| 词表设计（统一词表 B 方案） | ✅ 已定：`<pad>=0, <sos>=1, <eos>=2, 0=3, ..., 9=12, +=13` |
+| `token_table` + `table2index` | ✅ 已写（`table2index` 待修复） |
+| `encode()` | ⚠️ 基本骨架，待修正 add_sos_eos 逻辑 |
+| `decode()` | ✅ 基本可用 |
+| `generate_addition_data()` | ⬜ 待实现 |
+| `collate_batch()` | ⬜ 待实现 |
 
 ---
 
@@ -87,7 +102,11 @@ Transformer Decoder             ← ✅
     ↓
 ──────────────────── Python 基础实现阶段完结 ────────────────────
     ↓
-小规模推理 demo / 训练示例      ← ⏳ 下一阶段
+数据处理 pipeline               ← ⏳ 进行中
+    ↓
+训练循环                        ← 📋 规划中
+    ↓
+推理 demo                       ← 📋 规划中
     ↓
 注意力可视化                    ← 📋 规划中
     ↓
@@ -180,12 +199,11 @@ Python 基础实现阶段已全部完成。后续进入**应用与深入**阶段
 
 ### 第 1 步：小规模推理 demo / 训练示例 ⏳（进行中）
 
-用本仓库的 Transformer 在一个简单序列转换任务上跑起来：
-- 选项 A：**数字加法** — 输入 "12+34"，输出 "46"
-- 选项 B：**序列反转** — 输入 "12345"，输出 "54321"
-- 选项 C：**合成翻译** — 构造一个 toy bilingual 数据集（如数字→英文单词）
+用本仓库的 Transformer 在**数字加法**任务上跑起来：
 
-目标不是性能，而是验证整个前向推理（以及后续训练循环）能真正跑通。
+- **词表设计** ✅ 已定：统一词表 `<pad>=0, <sos>=1, <eos>=2, 0-9=3-12, +=13`
+- **数据 pipeline** ⏳ `src/data.py` 骨架已搭建：encode/decode 已完成初版，`generate_addition_data` / `collate_batch` 待实现
+- **待做**：修复 `table2index` 构造语法；实现数据生成函数；padding 对齐；编写测试
 
 ### 第 2 步：注意力可视化 📋
 
