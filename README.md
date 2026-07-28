@@ -26,7 +26,7 @@ transformer_implement/
 ├── test_ffn.py                 # Feed-Forward Network 测试（4 项）
 ├── test_encoder.py             # Encoder Block + TransformerEncoder 测试（7 项）
 ├── test_decoder.py             # Decoder Block + TransformerDecoder 测试（7 项）
-├── test_data.py                # 数据处理 pipeline 测试（待实现）
+├── test_data.py                # 数据处理 pipeline 测试（18 项）
 ├── test_transformer.py         # 完整端到端 Transformer 测试（5 项）
 ├── .vscode/
 │   └── settings.json           # VS Code 配置：conda 环境、pytest runner
@@ -47,7 +47,7 @@ transformer_implement/
 | Encoder Block + TransformerEncoder | `EncoderBlock` / `TransformerEncoder` | `test_encoder.py` | 7 | ✅ |
 | Decoder Block + TransformerDecoder | `DecoderBlock` / `TransformerDecoder` | `test_decoder.py` | 7 | ✅ |
 | 完整端到端 Transformer | `Transformer` | `test_transformer.py` | 5 | ✅ |
-| 数据处理 | `encode` / `decode` / `pad_sequences` / `generate_addition_data` / `collate_batch` | — | 0 | ✅ 待补测试 |
+| 数据处理 | `encode` / `decode` / `generate_addition_data` / `collate_batch` | `test_data.py` | 18 | ✅ |
 
 ---
 
@@ -55,7 +55,7 @@ transformer_implement/
 
 ### ✅ Python 基础实现（全部完成）
 
-所有 8 个模块（7 个核心模块 + 数据处理 pipeline）已在 `src/` 包中实现，37 项测试全部通过。
+所有 8 个模块（7 个核心模块 + 数据处理 pipeline）已在 `src/` 包中实现，55 项测试全部通过。
 
 | 阶段 | 完成内容 |
 |---|---|
@@ -75,9 +75,8 @@ transformer_implement/
 |---|---|---|
 | `encode(expr, add_sos_eos=False)` | 字符串 → token ID 列表 | 可选添加 `<sos>` / `<eos>` |
 | `decode(tokens)` | token ID 列表 → 字符串 | 双向无损 |
-| `pad_sequences(field1, field2, fill_value=0)` | 两序列右侧填充至等长 | 通用函数，不限于 token ID |
-| `generate_addition_data(max_digits=3)` | 生成单条加法样本 | 返回 (encoder_ids, decoder_ids_with_sos_eos) |
-| `collate_batch(batch)` | 批量采样 | 列表形式归集 |
+| | `generate_addition_data(max_digits=3)` | 生成单条加法样本 | 返回原始 (src_ids, tgt_ids)，不做 padding |
+| `collate_batch(batch_size)` | 批量采样 + batch 级 padding | src / tgt 分别 pad 到各自最大长度 |
 
 ---
 
@@ -102,7 +101,7 @@ Transformer Decoder             ← ✅
     ↓
 数据处理 pipeline               ← ✅
     ↓
-训练循环                        ← 📋 规划中
+训练循环                        ← ⏳
     ↓
 ──────────────────── Python 基础实现阶段完结 ────────────────────
     ↓
@@ -180,7 +179,7 @@ conda activate torch3.10
 pytest
 ```
 
-运行全部 37 项测试，所有测试应通过，无报错。数据层测试（`test_data.py`）待补。
+运行全部 55 项测试，所有测试应通过，无报错。数据层测试（`test_data.py`）已完成 18 项。
 
 当前测试分布：
 
@@ -193,8 +192,8 @@ pytest
 | `test_encoder.py` | 7 |
 | `test_decoder.py` | 7 |
 | `test_transformer.py` | 5 |
-| **合计** | **37** |
-| `test_data.py` | — | ⬜ 待实现 |
+| `test_data.py` | 18 |
+| **合计** | **55** |
 
 ---
 
@@ -208,8 +207,15 @@ Python 全部 8 个组件已实现，后续进入**应用与深入**阶段：
 
 - **词表设计** ✅
 - **数据 pipeline** ✅ `src/data.py` encode → decode → pad → generate → collate 完整链路
-- **训练循环** ⬜ 待实现：Teacher Forcing + CrossEntropyLoss + Adam 优化器
-- **验证** ⬜ 使用 `encode → generate → decode → 断言` 编写 `test_data.py`
+- **训练循环** ⏳ 进行中（骨架已写，待修复 3 个已知 bug）
+
+  | 问题 | 说明 | 修复方向 |
+  |---|---|---|
+  | 缺 `import torch` | `torch.tensor()` 需要库引用 | 顶部加 `import torch` |
+  | `vocab_size=13` | 词表实际 14 个 token，`+` 索引 13 | 改为 `len(token_table)` |
+  | `src_mask` 不识别 | `Transformer.forward()` 无此参数 | 改为 `model(src, tgt)` |
+
+- **验证** ✅ `test_data.py` 已编写 18 项测试，全部通过
 
 ### 第 2 步：推理 demo + 注意力可视化 📋
 

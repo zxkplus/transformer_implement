@@ -18,34 +18,6 @@ def decode(tokens):
     for id in tokens:
         strtoken += token_table[id]
     return strtoken
-
-from typing import Any, Sequence, List, Tuple
-def pad_sequences(
-    field1: Sequence[Any],
-    field2: Sequence[Any],
-    fill_value: Any = 0
-) -> Tuple[List[Any], List[Any]]:
-    """
-    比较两个序列的长度，用 fill_value 在较短的序列右侧填充至等长。
-
-    Args:
-        field1: 任意序列（支持 len() 和迭代）
-        field2: 任意序列
-        fill_value: 用于填充的元素，默认为 0
-
-    Returns:
-        两个新列表，长度相同，较短的已填充 fill_value。
-    """
-    max_len = max(len(field1), len(field2))
-    list1 = list(field1)
-    list2 = list(field2)
-
-    if len(list1) < max_len:
-        list1.extend([fill_value] * (max_len - len(list1)))
-    if len(list2) < max_len:
-        list2.extend([fill_value] * (max_len - len(list2)))
-
-    return list1, list2
 def generate_addition_data(max_digits=3):
     x1 = random.randint(10**max(max_digits-2,0), 10**max(max_digits-1,0))
     x2 = random.randint(10**max(max_digits-2,0), 10**max(max_digits-1,0))
@@ -53,10 +25,25 @@ def generate_addition_data(max_digits=3):
     ##补充一下如果不一样长就将位置对齐
     expression_str = str(x1) + "+" + str(x2)
     result_str = str(r1)
-    return pad_sequences(encode(expression_str),encode(result_str,True),0)
+    return encode(expression_str),encode(result_str,True)
 
-def collate_batch(batch):
+def collate_batch(batch_size):
+    """Generate a batch of addition samples and pad to uniform lengths."""
     datalist = []
-    for _ in range(batch):
-        datalist.append(generate_addition_data())
+    max_src_len = 0
+    max_tgt_len = 0
+    for _ in range(batch_size):
+        src, tgt = generate_addition_data()
+        max_src_len = max(max_src_len, len(src))
+        max_tgt_len = max(max_tgt_len, len(tgt))
+        datalist.append((src, tgt))
+
+    for src, tgt in datalist:
+        pad_src = max_src_len - len(src)
+        pad_tgt = max_tgt_len - len(tgt)
+        if pad_src > 0:
+            src.extend([0] * pad_src)
+        if pad_tgt > 0:
+            tgt.extend([0] * pad_tgt)
+
     return datalist
