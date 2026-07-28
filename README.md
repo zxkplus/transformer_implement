@@ -18,7 +18,7 @@ transformer_implement/
 │   ├── encoder.py              # EncoderBlock + TransformerEncoder
 │   ├── decoder.py              # DecoderBlock + TransformerDecoder
 │   ├── transformer.py          # 端到端 Transformer（整合 PE + Encoder + Decoder）
-│   └── data.py                 # 数据处理：词表、编码、数据生成、padding（骨架搭建中）
+│   └── data.py                 # 数据处理：词表、编码、padding、数据生成
 ├── main.py                     # 快速入口（from src import *）
 ├── test_attention.py           # Scaled Dot-Product Attention 测试（4 项）
 ├── test_multihead.py           # Multi-Head Attention 测试（5 项）
@@ -26,6 +26,7 @@ transformer_implement/
 ├── test_ffn.py                 # Feed-Forward Network 测试（4 项）
 ├── test_encoder.py             # Encoder Block + TransformerEncoder 测试（7 项）
 ├── test_decoder.py             # Decoder Block + TransformerDecoder 测试（7 项）
+├── test_data.py                # 数据处理 pipeline 测试（待实现）
 ├── test_transformer.py         # 完整端到端 Transformer 测试（5 项）
 ├── .vscode/
 │   └── settings.json           # VS Code 配置：conda 环境、pytest runner
@@ -46,7 +47,7 @@ transformer_implement/
 | Encoder Block + TransformerEncoder | `EncoderBlock` / `TransformerEncoder` | `test_encoder.py` | 7 | ✅ |
 | Decoder Block + TransformerDecoder | `DecoderBlock` / `TransformerDecoder` | `test_decoder.py` | 7 | ✅ |
 | 完整端到端 Transformer | `Transformer` | `test_transformer.py` | 5 | ✅ |
-| 数据处理 | 词表 + encode/decode + 数据生成 | — | 0 | ⏳ 骨架搭建中 |
+| 数据处理 | `encode` / `decode` / `pad_sequences` / `generate_addition_data` / `collate_batch` | — | 0 | ✅ 待补测试 |
 
 ---
 
@@ -54,7 +55,7 @@ transformer_implement/
 
 ### ✅ Python 基础实现（全部完成）
 
-所有 7 个核心模块已在 `src/` 包中独立实现，37 项测试全部通过。
+所有 8 个模块（7 个核心模块 + 数据处理 pipeline）已在 `src/` 包中实现，37 项测试全部通过。
 
 | 阶段 | 完成内容 |
 |---|---|
@@ -66,18 +67,17 @@ transformer_implement/
 | 6. 完整 Transformer | `Transformer`（独立 src/tgt embedding + 动态 mask 切片） |
 | 7. 代码拆包 | `src/` 包拆分完成，`__init__.py` 统一导出 |
 
-### ⏳ 数据处理（骨架搭建中）
+### ✅ 数据处理（已完成）
 
-目标：为数字加法推理/训练提供数据 pipeline。
+为数字加法任务提供完整数据 pipeline，核心函数位于 `src/data.py`：
 
-| 子模块 | 状态 |
-|---|---|
-| 词表设计（统一词表 B 方案） | ✅ 已定：`<pad>=0, <sos>=1, <eos>=2, 0=3, ..., 9=12, +=13` |
-| `token_table` + `table2index` | ✅ 已写（`table2index` 待修复） |
-| `encode()` | ⚠️ 基本骨架，待修正 add_sos_eos 逻辑 |
-| `decode()` | ✅ 基本可用 |
-| `generate_addition_data()` | ⬜ 待实现 |
-| `collate_batch()` | ⬜ 待实现 |
+| 函数 | 功能 | 说明 |
+|---|---|---|
+| `encode(expr, add_sos_eos=False)` | 字符串 → token ID 列表 | 可选添加 `<sos>` / `<eos>` |
+| `decode(tokens)` | token ID 列表 → 字符串 | 双向无损 |
+| `pad_sequences(field1, field2, fill_value=0)` | 两序列右侧填充至等长 | 通用函数，不限于 token ID |
+| `generate_addition_data(max_digits=3)` | 生成单条加法样本 | 返回 (encoder_ids, decoder_ids_with_sos_eos) |
+| `collate_batch(batch)` | 批量采样 | 列表形式归集 |
 
 ---
 
@@ -100,11 +100,11 @@ Transformer Decoder             ← ✅
     ↓
 代码拆包 → src/ 包              ← ✅
     ↓
-──────────────────── Python 基础实现阶段完结 ────────────────────
-    ↓
-数据处理 pipeline               ← ⏳ 进行中
+数据处理 pipeline               ← ✅
     ↓
 训练循环                        ← 📋 规划中
+    ↓
+──────────────────── Python 基础实现阶段完结 ────────────────────
     ↓
 推理 demo                       ← 📋 规划中
     ↓
@@ -119,9 +119,13 @@ CUDA 版：从 Python 到 C++      ← 📋 规划中
 
 ### 环境
 
-- **Conda 环境**：`pytorch_env_v1`（Python 3.12.4, PyTorch 2.6.0+cu124）
-- **激活方式**：`conda activate pytorch_env_v1`（PowerShell 中也可直接调用 `D:\ProgramData\anaconda3\envs\pytorch_env_v1\python.exe`）
-- **conda 路径**：`D:\ProgramData\anaconda3`
+- **Conda 环境**：`torch3.10`（Python 3.10.19, PyTorch 2.10.0+cu130）
+- **激活方式**：`conda activate torch3.10`
+- **conda 路径**：`/home/industai/anaconda3`
+- 项目首次使用前需安装 pytest：
+  ```bash
+  pip install pytest
+  ```
 
 ### 测试
 
@@ -172,11 +176,11 @@ CUDA 版：从 Python 到 C++      ← 📋 规划中
 ## 验证方法
 
 ```bash
-conda activate pytorch_env_v1
+conda activate torch3.10
 pytest
 ```
 
-运行全部 37 项测试，所有测试应通过，无报错。
+运行全部 37 项测试，所有测试应通过，无报错。数据层测试（`test_data.py`）待补。
 
 当前测试分布：
 
@@ -190,22 +194,24 @@ pytest
 | `test_decoder.py` | 7 |
 | `test_transformer.py` | 5 |
 | **合计** | **37** |
+| `test_data.py` | — | ⬜ 待实现 |
 
 ---
 
 ## 下一步方向
 
-Python 基础实现阶段已全部完成。后续进入**应用与深入**阶段：
+Python 全部 8 个组件已实现，后续进入**应用与深入**阶段：
 
-### 第 1 步：小规模推理 demo / 训练示例 ⏳（进行中）
+### 第 1 步：训练循环 ⏳（进行中）
 
 用本仓库的 Transformer 在**数字加法**任务上跑起来：
 
-- **词表设计** ✅ 已定：统一词表 `<pad>=0, <sos>=1, <eos>=2, 0-9=3-12, +=13`
-- **数据 pipeline** ⏳ `src/data.py` 骨架已搭建：encode/decode 已完成初版，`generate_addition_data` / `collate_batch` 待实现
-- **待做**：修复 `table2index` 构造语法；实现数据生成函数；padding 对齐；编写测试
+- **词表设计** ✅
+- **数据 pipeline** ✅ `src/data.py` encode → decode → pad → generate → collate 完整链路
+- **训练循环** ⬜ 待实现：Teacher Forcing + CrossEntropyLoss + Adam 优化器
+- **验证** ⬜ 使用 `encode → generate → decode → 断言` 编写 `test_data.py`
 
-### 第 2 步：注意力可视化 📋
+### 第 2 步：推理 demo + 注意力可视化 📋
 
 - 把 encoder 自注意力和 decoder 交叉注意力的权重矩阵画出来
 - 理解不同 head 学到了什么模式
