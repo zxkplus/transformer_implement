@@ -2,13 +2,27 @@
 from src.transformer import *
 from torch.optim import Adam
 import torch.nn as nn
+import torch
+
+def predict(model,src_str,max_len=20):
+    src_ids = encode(src_str)
+    src_tensor = torch.tensor([src_ids]).to(device)
+    tgt_ids = [1]
+    for _ in range(max_len):
+        tgt_tensor = torch.tensor([tgt_ids]).to(device)
+        logits = model(src_tensor,tgt_tensor)
+        next_id = logits[0, -1, :].argmax().item()
+        if next_id == 2:  # <eos>
+            break
+        tgt_ids.append(next_id)
+    return decode(tgt_ids[1:])
 
 if __name__ == '__main__':
-    vocab_size = 13
-    num_steps = 500
-    batch_size = 16
-
-    model = Transformer(vocab_size,vocab_size,32,4,2)
+    vocab_size = 128
+    num_steps = 5000
+    batch_size = 64
+    device = torch.device('cuda:0')
+    model = Transformer(vocab_size,vocab_size,32,4,2).to(device)
     optimizer = Adam(model.parameters())
     loss_fn = nn.CrossEntropyLoss(ignore_index=0)
 
@@ -19,8 +33,8 @@ if __name__ == '__main__':
         #转tensor
         src_token_list , tgt_token_list = zip(*batch)
 
-        src_tensor = torch.tensor(src_token_list)           # 形状 (batch, src_len)
-        tgt_tensor = torch.tensor(tgt_token_list)           # 形状 (batch, tgt_len)
+        src_tensor = torch.tensor(src_token_list).to(device)           # 形状 (batch, src_len)
+        tgt_tensor = torch.tensor(tgt_token_list).to(device)           # 形状 (batch, tgt_len)
 
         # 3. 构造 padding mask
         #    Transformer.forward 的 src_mask 参数接收 (batch, 1, 1, src_len)
@@ -32,7 +46,7 @@ if __name__ == '__main__':
         target       = tgt_tensor[:, 1:]           # 去掉 <sos>
 
         # 5. 前向传播
-        logits = model(src_tensor, decoder_input, src_mask=src_padding_mask)
+        logits = model(src_tensor, decoder_input)
 
         # 6. 算 loss
         # reshape logits → (batch * seq, vocab_size)
@@ -47,3 +61,11 @@ if __name__ == '__main__':
         # 8. 打印 loss
         if step % 100 == 0:
             print(f"step {step}, loss = {loss.item():.4f}")
+    
+    torch.save(model.state_dict(),'addition_model_4.pt')
+
+    model.load_state_dict(torch.load('addition_model_4.pt'))
+    ##开始实际预测
+    experession_str = "2+146"
+    result = predict(model,experession_str)
+    print(experession_str,"=",result)

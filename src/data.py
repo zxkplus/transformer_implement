@@ -18,9 +18,11 @@ def decode(tokens):
     for id in tokens:
         strtoken += token_table[id]
     return strtoken
-def generate_addition_data(max_digits=3):
-    x1 = random.randint(10**max(max_digits-2,0), 10**max(max_digits-1,0))
-    x2 = random.randint(10**max(max_digits-2,0), 10**max(max_digits-1,0))
+def generate_addition_data(min_digits = 1,max_digits=3):
+    d1 = random.randint(min_digits, max_digits)
+    d2 = random.randint(min_digits, max_digits)
+    x1 = random.randint(10**(d1-1), 10**d1 - 1)
+    x2 = random.randint(10**(d2-1), 10**d2 - 1)
     r1 = x1 + x2
     ##补充一下如果不一样长就将位置对齐
     expression_str = str(x1) + "+" + str(x2)
@@ -45,5 +47,4 @@ def collate_batch(batch_size):
             src.extend([0] * pad_src)
         if pad_tgt > 0:
             tgt.extend([0] * pad_tgt)
-
     return datalist

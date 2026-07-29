@@ -28,6 +28,8 @@ transformer_implement/
 ├── test_decoder.py             # Decoder Block + TransformerDecoder 测试（7 项）
 ├── test_data.py                # 数据处理 pipeline 测试（18 项）
 ├── test_transformer.py         # 完整端到端 Transformer 测试（5 项）
+├── visual_script.py              # 交互式推理 demo
+├── visual_attention.py           # 注意力可视化（hook 框架已完成）
 ├── .vscode/
 │   └── settings.json           # VS Code 配置：conda 环境、pytest runner
 ├── AGENTS.md                   # Agent 行为指南（仅供 agent 读取）
@@ -47,7 +49,9 @@ transformer_implement/
 | Encoder Block + TransformerEncoder | `EncoderBlock` / `TransformerEncoder` | `test_encoder.py` | 7 | ✅ |
 | Decoder Block + TransformerDecoder | `DecoderBlock` / `TransformerDecoder` | `test_decoder.py` | 7 | ✅ |
 | 完整端到端 Transformer | `Transformer` | `test_transformer.py` | 5 | ✅ |
-| 数据处理 | `encode` / `decode` / `generate_addition_data` / `collate_batch` | `test_data.py` | 18 | ✅ |
+| 数据处理 | `encode` / `decode` / `generate_addition_data` / `collate_batch` | `test_data.py` | 18 |
+| `visual_script.py` | — | ☆ 推理 demo |
+| `visual_attention.py` | — | ☆ 可视化 scaffold | ✅ |
 
 ---
 
@@ -55,7 +59,7 @@ transformer_implement/
 
 ### ✅ Python 基础实现（全部完成）
 
-所有 8 个模块（7 个核心模块 + 数据处理 pipeline）已在 `src/` 包中实现，55 项测试全部通过。
+所有 8 个模块（7 个核心模块 + 数据处理 pipeline + GPU 训练 + 推理 demo）已在 `src/` 包中实现，55 项测试全部通过。
 
 | 阶段 | 完成内容 |
 |---|---|
@@ -66,6 +70,9 @@ transformer_implement/
 | 5. Decoder | `DecoderBlock` + `TransformerDecoder`（自注意力 + 交叉注意力 + causal mask） |
 | 6. 完整 Transformer | `Transformer`（独立 src/tgt embedding + 动态 mask 切片） |
 | 7. 代码拆包 | `src/` 包拆分完成，`__init__.py` 统一导出 |
+| 8. GPU 训练 | GPU (RTX 4060 Ti 12GB) 训练支持，causalmask 修为 register_buffer |
+| 9. 推理 demo | 交互式脚本 visual_script.py，支持随机输入算式并预测 |
+| 10. 注意力可视化 | PyTorch hook 框架已完成，直接捕获 attention 矩阵并用 matplotlib 绘制热力图 |
 
 ### ✅ 数据处理（已完成）
 
@@ -75,7 +82,7 @@ transformer_implement/
 |---|---|---|
 | `encode(expr, add_sos_eos=False)` | 字符串 → token ID 列表 | 可选添加 `<sos>` / `<eos>` |
 | `decode(tokens)` | token ID 列表 → 字符串 | 双向无损 |
-| | `generate_addition_data(max_digits=3)` | 生成单条加法样本 | 返回原始 (src_ids, tgt_ids)，不做 padding |
+| | `generate_addition_data(min_digits=1, max_digits=3)` | 生成单条加法样本 | 返回原始 (src_ids, tgt_ids)，不做 padding。支持自定义位数范围 |
 | `collate_batch(batch_size)` | 批量采样 + batch 级 padding | src / tgt 分别 pad 到各自最大长度 |
 
 ---
@@ -101,13 +108,13 @@ Transformer Decoder             ← ✅
     ↓
 数据处理 pipeline               ← ✅
     ↓
-训练循环                        ← ⏳
+训练循环                        ← ✅
     ↓
 ──────────────────── Python 基础实现阶段完结 ────────────────────
     ↓
-推理 demo                       ← 📋 规划中
+推理 demo                       ← 📋 已完成
     ↓
-注意力可视化                    ← 📋 规划中
+注意力可视化                    ← 📋 进行中
     ↓
 CUDA 版：从 Python 到 C++      ← 📋 规划中
 ```
@@ -193,6 +200,8 @@ pytest
 | `test_decoder.py` | 7 |
 | `test_transformer.py` | 5 |
 | `test_data.py` | 18 |
+| `visual_script.py` | — | ☆ 推理 demo |
+| `visual_attention.py` | — | ☆ 可视化 scaffold |
 | **合计** | **55** |
 
 ---
@@ -201,21 +210,27 @@ pytest
 
 Python 全部 8 个组件已实现，后续进入**应用与深入**阶段：
 
-### 第 1 步：训练循环 ⏳（进行中）
+### 第 1 步：训练循环 ⏳（已完成）
 
 用本仓库的 Transformer 在**数字加法**任务上跑起来：
 
 - **词表设计** ✅
 - **数据 pipeline** ✅ `src/data.py` encode → decode → pad → generate → collate 完整链路
-- **训练循环** ⏳ 进行中（骨架已写，待修复 3 个已知 bug）
+- **训练循环** ✅ 已完成。使用 Teacher Forcing + CrossEntropyLoss(ignore_index=0) + Adam，在 GPU RTX 4060 Ti 上训练
+- 备注：训练范围为纯 2 位数加法时效果最佳，loss 降至 0.0069，预测准确率接近 100%。混合位数时需更多训练步数
+- **推理 demo** ✅ 交互式脚本 `visual_script.py`，可输入任意 2 位数加法进行预测
+- **注意力可视化** ⏳ 进行中。使用 PyTorch forward hook 捕获 attention 权重，并用 matplotlib 用热力图展示
+- **验证** ✅ `test_data.py` 18 项测试全部通过
 
-  | 问题 | 说明 | 修复方向 |
-  |---|---|---|
-  | 缺 `import torch` | `torch.tensor()` 需要库引用 | 顶部加 `import torch` |
-  | `vocab_size=13` | 词表实际 14 个 token，`+` 索引 13 | 改为 `len(token_table)` |
-  | `src_mask` 不识别 | `Transformer.forward()` 无此参数 | 改为 `model(src, tgt)` |
+#### 已知问题与做出的决策
 
-- **验证** ✅ `test_data.py` 已编写 18 项测试，全部通过
+| 问题 | 状态 | 原因/做出的决策 |
+|---|---|---|
+| src_mask 不被 forward 接受 | ✅ 已解决 | 当前任务 src 无填充，不需要 |
+| vocab_size=13 | ✅ 已解决 | 改为 len(token_table)=14 |
+| 缂o import torch | ✅ 已解决 | 顶部添加 |
+| causalmask 留在 CPU | ✅ 已解决 | register_buffer 注册 |
+| 混合位数加法效果不好 | ⚠️ 待研究 | 模型容量不足，或训练步数不够
 
 ### 第 2 步：推理 demo + 注意力可视化 📋
 
